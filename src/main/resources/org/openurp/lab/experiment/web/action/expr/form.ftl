@@ -1,0 +1,27 @@
+[@b.toolbar title="实验项目维护"]
+  bar.addBack();
+[/@]
+  [#assign course=experiment.course/]
+  [@b.form theme="list" action=b.rest.save(experiment)]
+    [@b.field label="课程"]${course.code} ${course.name} ${course.defaultCredits!}学分[/@]
+    [@b.textfield name="experiment.name" label="实验名称" value=experiment.name! required="true" style="width:300px"/]
+    [@b.textfield name="experiment.code" label="实验编号" value=experiment.code! required="true"  /]
+    [@b.textfield name="experiment.creditHours" label="学时" value=experiment.creditHours! required="true"  /]
+    [@b.select name="experiment.category.id" label="实验类别" items=categories value=experiment.category! empty="..." required="true" /]
+    [@b.select name="experiment.experimentType.id" label="实验类型" items=experimentTypes value=experiment.experimentType! empty="..." required="true" /]
+    [@b.select name="experiment.discipline.id" label="实验所属学科" items=disciplines value=experiment.discipline! empty="..." required="true" option=r"${item.code} ${item.name}"/]
+    [@b.radios label="是否在线实验"  name="experiment.online" value=experiment.online items="1:common.yes,0:common.no" required="true"/]
+    [@b.number label="每组人数" name="experiment.groupStdCount" value=experiment.groupStdCount required="true" min="1" max="50"/]
+    [@b.select name="experiment.beginOn" label="生效日期" value=experiment.beginOn?string required="true"  items=semesterDates empty="..."/]
+    [@b.date name="experiment.endOn" label="失效日期" value=experiment.endOn! empty="..."/]
+    [@b.textfield name="experiment.remark" label="备注" value=experiment.remark! maxlength="3"/]
+    [@b.formfoot]
+      [#if experiment.id??]
+      <input name="experiment.id" type="hidden" value="${experiment.id}"/>
+      [/#if]
+      <input name="experiment.course.id" type="hidden" value="${experiment.course.id}"/>
+      [@b.submit value="保存" /]
+    [/@]
+  [/@]
+  [#list 1..6 as i]<br>[/#list]
+
