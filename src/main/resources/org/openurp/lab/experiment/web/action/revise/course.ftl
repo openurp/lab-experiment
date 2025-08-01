@@ -9,6 +9,15 @@
       text-align:right;
       color: #6c757d !important;
     }
+    .red-point{ position: relative; }
+    .red-point::before{
+       content: " "; border: 3px solid red;
+       border-radius:3px;
+       position: absolute;
+       z-index: 1000;
+       right: 0;
+       margin-right: -5px;
+    }
   </style>
   [@b.messages slash="3"/]
   <div class="card card-info card-primary card-outline">
@@ -62,6 +71,9 @@
         </div>
     </div>
     <div class="card-body" style="padding-top: 0px;">
+      [#if task.experiments?size==0]
+        <p class="alert alert-warning">缺少实验项目，需要填写。</p>
+      [/#if]
       [@b.grid items=task.experiments?sort_by("idx") var="exp" theme="mini"]
         [@b.row]
           [@b.col property="idx" title="实验序号"/]
@@ -69,16 +81,25 @@
             <a href='${b.url("!edit?experiment.id=${exp.experiment.id}&task.id=${task.id}")}'
                data-toggle="modal" data-target="#experimentDialog">${exp.experiment.name}</a>
           [/@]
-          [@b.col property="experiment.category.name" title="实验类别"/]
+          [@b.col property="experiment.category.name" title="实验类别"]
+            [#if exp.experiment.category??]${exp.experiment.category.name}[#else]<span class="red-point" title="缺少数据">--</span>[/#if]
+          [/@]
           [@b.col property="experiment.experimentType.name" title="实验类型"/]
-          [@b.col property="experiment.creditHours" title="学时"/]
-          [@b.col property="experiment.groupStdCount" title="每组人数"/]
-          [@b.col property="experiment.discipline.name" title="学科"/]
+          [@b.col property="experiment.creditHours" title="学时"]
+            [#if exp.experiment.creditHours>0]${exp.experiment.creditHours}[#else]<span class="red-point" title="需要大于0">0</span>[/#if]
+          [/@]
+          [@b.col property="experiment.groupStdCount" title="每组人数"]
+             [#if exp.experiment.groupStdCount>0]${exp.experiment.groupStdCount}[#else]<span class="red-point" title="需要大于0">0</span>[/#if]
+          [/@]
+          [@b.col property="experiment.discipline.name" title="学科"]
+            [#if exp.experiment.discipline??]${exp.experiment.discipline.name}[#else]<span class="red-point" title="缺少数据">--</span>[/#if]
+          [/@]
           [@b.col title="操作"]
             [@b.a href="!evict?experiment.id="+exp.experiment.id+"&task.id="+task.id onclick="if(confirm('确认这学期移除该实验项目？')){return bg.Go(this,null)}else{return false;}"]移除[/@]
           [/@]
         [/@]
       [/@]
+      [#if hasErrorData]<p class="text-muted"><span class="red-point">红点</span>表示有数据问题，需要维护。</p>[/#if]
     </div>
   </div>
   [/#if]

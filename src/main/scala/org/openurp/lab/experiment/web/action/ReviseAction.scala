@@ -91,9 +91,16 @@ class ReviseAction extends TeacherSupport, EntitySupport[Experiment] {
     }
     put("course", course)
     val syllabuses = getSyllabuses(course, semester)
-    put("syllabus", syllabuses.head)
+    put("syllabus", syllabuses.headOption)
     put("semester", semester)
     put("task", task)
+    task foreach { t =>
+      val hasErrorData = t.experiments.exists { le =>
+        val e = le.experiment
+        e.creditHours <= 0 || e.category.isEmpty || e.groupStdCount <= 0 || e.discipline.isEmpty
+      }
+      put("hasErrorData", t.experiments.isEmpty || hasErrorData)
+    }
     forward()
   }
 
@@ -119,7 +126,7 @@ class ReviseAction extends TeacherSupport, EntitySupport[Experiment] {
     put("disciplines", getCodes(classOf[Level1Discipline]))
     put("task", task)
 
-    var maxHours: Float = course.creditHours
+    var maxHours = course.creditHours.toFloat
     val syllabuses = getSyllabuses(course, task.semester)
     syllabuses.headOption foreach { s =>
       val syllabusHours = s.hours.filter(_.nature.category != TeachingNatureCategory.Theory).map(_.creditHours).sum
