@@ -33,6 +33,7 @@ import org.openurp.edu.clazz.model.Clazz
 import org.openurp.edu.course.model.{Syllabus, SyllabusExperiment}
 import org.openurp.edu.course.service.CourseTaskService
 import org.openurp.lab.experiment.model.{LabExperiment, LabTask}
+import org.openurp.lab.experiment.web.helper.SyllabusHelper
 import org.openurp.starter.web.support.TeacherSupport
 
 import java.time.Instant
@@ -60,7 +61,6 @@ class ReviseAction extends TeacherSupport, EntitySupport[Experiment] {
     val hisCourses = Collections.newBuffer(entityDao.search(query2))
     hisCourses.subtractAll(clazzCourses)
     hisCourses.subtractAll(taskCourses)
-
 
     put("taskCourses", taskCourses)
     put("hisCourses", hisCourses)
@@ -90,7 +90,7 @@ class ReviseAction extends TeacherSupport, EntitySupport[Experiment] {
       put("orphans", orphans)
     }
     put("course", course)
-    val syllabuses = getSyllabuses(course, semester)
+    val syllabuses = new SyllabusHelper(entityDao).getSyllabus(course, semester)
     put("syllabus", syllabuses.headOption)
     put("semester", semester)
     put("task", task)
@@ -114,7 +114,7 @@ class ReviseAction extends TeacherSupport, EntitySupport[Experiment] {
     put("experiment", experiment)
     //顺序进行实验序号
     val idx = task.experiments.find(_.experiment == experiment) match {
-      case None => task.experiments.size + 1
+      case None => if (task.experiments.isEmpty) 1 else task.experiments.map(_.idx).max + 1
       case Some(le) => le.idx
     }
     put("idx", idx)
@@ -127,7 +127,7 @@ class ReviseAction extends TeacherSupport, EntitySupport[Experiment] {
     put("task", task)
 
     var maxHours = course.creditHours.toFloat
-    val syllabuses = getSyllabuses(course, task.semester)
+    val syllabuses = new SyllabusHelper(entityDao).getSyllabus(course, task.semester)
     syllabuses.headOption foreach { s =>
       val syllabusHours = s.hours.filter(_.nature.category != TeachingNatureCategory.Theory).map(_.creditHours).sum
       val taskHours = task.experiments.map(_.experiment.creditHours).sum
@@ -138,8 +138,10 @@ class ReviseAction extends TeacherSupport, EntitySupport[Experiment] {
     put("syllabuses", syllabuses)
     put("newExperiment", false)
     if (experiment.persisted) {
-      if (!syllabuses.flatMap(_.experiments.map(_.experiment)).contains(experiment)) {
-        put("newExperiment", true)
+      syllabuses foreach { syllabus =>
+        if (!syllabus.experiments.map(_.experiment).contains(experiment)) {
+          put("newExperiment", true)
+        }
       }
     } else {
       put("newExperiment", true)
@@ -198,6 +200,9 @@ class ReviseAction extends TeacherSupport, EntitySupport[Experiment] {
     entityDao.saveOrUpdate(exp)
 
     addExperiment(exp, task, getBoolean("addToSyllabus", true), getInt("idx"))
+    task.checkValidated()
+    task.expCount = task.experiments.size
+    entityDao.saveOrUpdate(task)
     redirect("course", s"&course.id=${exp.course.id}&semester.id=${task.semester.id}", "info.save.success")
   }
 
@@ -210,7 +215,7 @@ class ReviseAction extends TeacherSupport, EntitySupport[Experiment] {
     val experiment = entityDao.get(classOf[Experiment], getLongId("experiment"))
     if (task.director.get.code == Securities.user) {
       //删除大纲中的实验
-      val syllabuses = getSyllabuses(experiment.course, task.semester)
+      val syllabuses = new SyllabusHelper(entityDao).getSyllabus(experiment.course, task.semester)
       syllabuses foreach { syllabus =>
         syllabus.removeExperiment(experiment)
       }
@@ -218,6 +223,8 @@ class ReviseAction extends TeacherSupport, EntitySupport[Experiment] {
       //从这学期的修订任务中删除
       task.remove(experiment)
       relocate(task, experiment, -1)
+      task.expCount = task.experiments.size
+
       entityDao.saveOrUpdate(task)
     }
     redirect("course", s"&course.id=${task.course.id}&semester.id=${task.semester.id}", "info.save.success")
@@ -271,8 +278,9 @@ class ReviseAction extends TeacherSupport, EntitySupport[Experiment] {
     task.experiments.find(_.experiment == exp) match {
       case Some(le) =>
         if (le.idx != idx) {
-          task.experiments.subtractOne(le)
+          //生成一个临时排序集
           val experiments = task.experiments.sortBy(_.idx)
+          experiments.subtractOne(le)
           experiments.insert(idx - 1, le)
           var i = 1001
           experiments foreach { le =>
@@ -298,11 +306,12 @@ class ReviseAction extends TeacherSupport, EntitySupport[Experiment] {
 
   private def addExperiment(exp: Experiment, task: LabTask, addToSyllabus: Boolean, index: Option[Int]): Unit = {
     if (!task.experiments.exists(_.experiment == exp)) {
-      task.experiments.addOne(new LabExperiment(task.experiments.size + 1, task, exp))
+      task.experiments.addOne(new LabExperiment(-1, task, exp))
+      relocate(task, exp, task.experiments.size)
       entityDao.saveOrUpdate(task)
     }
     if (addToSyllabus) {
-      val syllabuses = getSyllabuses(exp.course, task.semester)
+      val syllabuses = new SyllabusHelper(entityDao).getSyllabus(exp.course, task.semester)
       syllabuses.foreach { s =>
         if (!s.experiments.map(_.experiment).contains(exp)) {
           s.experiments.addOne(new SyllabusExperiment(s, s.experiments.size + 1, exp))
@@ -315,10 +324,6 @@ class ReviseAction extends TeacherSupport, EntitySupport[Experiment] {
     if (index.nonEmpty) {
       relocate(task, exp, index.get)
     }
-  }
-
-  private def getSyllabuses(course: Course, semester: Semester): Seq[Syllabus] = {
-    entityDao.findBy(classOf[Syllabus], "course", course).filter(_.within(semester.beginOn))
   }
 
   private def getTasks(project: Project, semester: Semester, teacher: Teacher): Seq[LabTask] = {

@@ -35,7 +35,6 @@
        </div>
        [/#if]
 
-
        [#if clazzCourses?size>0]
        <div class="card card-info card-primary card-outline">
          <div class="card-header" id="stat_header_2">

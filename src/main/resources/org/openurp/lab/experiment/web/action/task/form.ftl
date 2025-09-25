@@ -6,6 +6,7 @@
     [@b.field label="课程"]${task.course.name}(${task.course.code})[/@]
     [@b.field label="开课学院"]${task.department.name}[/@]
     [@b.radios label="是否设置实验"  name="task.required" value=task.required!false items="1:common.yes,0:common.no" required="true"/]
+    [@b.textfield name="task.remark" label="备注" value=task.remark! maxlength="30"/]
     [@b.formfoot]
       [@b.reset/]&nbsp;&nbsp;[@b.submit value="action.submit"/]
     [/@]

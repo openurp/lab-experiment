@@ -1,93 +1,82 @@
 [#ftl]
 [@b.head/]
-[@b.toolbar title="课程群组信息"]
+[@b.toolbar title="课程实验信息"]
   bar.addBack();
 [/@]
-[#macro displayTeacher t]
-  <td [#if t.endOn??]class="text-muted"[/#if]>${t.code}</td>
-  <td [#if t.endOn??]class="text-muted"[/#if]>${t.name}[#if t.gender.id!=1](${t.gender.name})[/#if]</td>
-  <td [#if t.endOn??]class="text-muted"[/#if]>${(t.staff.title.name)!}</td>
-  <td [#if t.endOn??]class="text-muted"[/#if]>${t.department.name}</td>
-[/#macro]
+<style>
+    .red-point{ position: relative; }
+    .red-point::before{
+       content: " "; border: 3px solid red;
+       border-radius:3px;
+       position: absolute;
+       z-index: 1000;
+       right: 0;
+       margin-right: -5px;
+    }
+</style>
+[#assign hours =0/]
+[#list task.experiments as e][#assign hours = hours+e.experiment.creditHours/][/#list]
 <div class="container">
-  <h5>${task.course.code} ${task.name}</h5>
-  <div class="card card-info card-primary card-outline">
+  <div class="card card-primary card-outline">
     <div class="card-header">
-      <h4 class="card-title">基本信息</h4>
+      <h4 class="card-title">实验项目信息[#if hours>0](${task.experiments?size}项 ${hours}学时)[/#if]</h4>
     </div>
-    <table class="infoTable">
+    <div class="card-body" style="padding-top:0px">
+      <table class="table table-sm table-detail">
+        <tr>
+          <td class="title" width="10%">代码:</td>
+          <td>${task.course.code}</td>
+          <td class="title" width="10%">名称:</td>
+          <td>${task.course.name}</td>
+          <td class="title" width="10%">学分:</td>
+          <td>${task.course.defaultCredits!}</td>
+        </tr>
+        <tr>
+          <td class="title">英文名:</td>
+          <td>${task.course.enName!}</td>
+          <td class="title">院系:</td>
+          <td>${(task.course.department.name)!}</td>
+          <td class="title">负责人:</td>
+          <td>${(task.director.name)!}</td>
+        </tr>
       <tr>
-        <td class="title" width="20%">代码:</td>
-        <td class="content">${task.course.code}</td>
-        <td class="title" width="20%">名称:</td>
-        <td class="content">${task.name}</td>
+        <td class="title">人数:</td>
+        <td>${(task.clazzCount)!}班 ${(task.stdCount)!}人</td>
+        <td class="title">实验室:</td>
+        <td colspan="3">[#list task.labs as lab]${lab.room.name}[#sep],[/#list]</td>
       </tr>
+      [#if !task.required]
       <tr>
-        <td class="title">英文名:</td>
-        <td class="content">${task.enName!}</td>
-        <td class="title">院系:</td>
-        <td class="content">${(task.department.name)!}</td>
+        <td class="title">说明:</td>
+        <td colspan="3">不需要填写实验项目：${task.remark!}</td>
       </tr>
-      <tr>
-        <td class="title">系/教研室:</td>
-        <td class="content">${(task.office.name)!}</td>
-        <td class="title">负责人:</td>
-        <td class="content">${(task.director.name)!}</td>
-      </tr>
-    </table>
-    [#if task.teachers?size > 0]
-    <table class="table table-hover table-sm table-striped">
-       <thead style="text-align:center">
-         <th>教师工号</th>
-         <th>教师姓名</th>
-         <th>职称</th>
-         <th>所在部门</th>
-         <th>教师工号</th>
-         <th>教师姓名</th>
-         <th>职称</th>
-         <th>所在部门</th>
-      </thead>
-      <tbody>
-      [#assign teacherCountHalf = (task.teachers?size+1)/2?int/]
-      [#assign teacherColumns  = task.teachers?sort_by("beginOn")?chunk(teacherCountHalf)/]
-      [#list 0..teacherCountHalf-1 as i]
-      <tr style="text-align:center">
-        [@displayTeacher teacherColumns[0][i]/]
-        [#if teacherColumns[1][i]??]
-        [@displayTeacher teacherColumns[1][i]/]
-        [#else]
-        <td></td><td></td><td></td><td></td>
+      [/#if]
+      </table>
+      [#if task.required]
+        [#if task.experiments?size==0]
+          <p class="alert alert-warning">缺少实验项目，需要填写。</p>
         [/#if]
-      </tr>
-      [/#list]
-    </table>
-    [/#if]
-    <table class="table table-hover table-sm table-striped">
-       <thead style="text-align:center">
-         <th>课程代码</th>
-         <th>课程名称</th>
-         <th>开课院系</th>
-         <th>建议课程类别</th>
-         <th>学分</th>
-         <th>学时</th>
-         <th>考查方式</th>
-         <th>有效期</th>
-      </thead>
-      <tbody>
-      [#list task.courses as c]
-      <tr style="text-align:center">
-        <td>${c.code}</td>
-        <td>${c.name}</td>
-        <td>${c.department.name}</td>
-        <td>${c.courseType.name}</td>
-        <td>${c.defaultCredits}</td>
-        <td>${c.creditHours}</td>
-        <td>${(c.examMode.name)!}</td>
-        <td>${c.beginOn}~${c.endOn!}</td>
-      </tr>
-      [/#list]
-    </table>
+        [@b.grid items=task.experiments?sort_by("idx") var="exp" theme="mini" class="table-sm table-mini"]
+          [@b.row]
+            [@b.col property="idx" title="序号" width="7%"/]
+            [@b.col property="experiment.name" title="实验名称"/]
+            [@b.col property="experiment.category.name" title="实验类别"  width="15%"]
+              [#if exp.experiment.category??]${exp.experiment.category.name}[#else]<span class="red-point" title="缺少数据">--</span>[/#if]
+            [/@]
+            [@b.col property="experiment.experimentType.name" title="实验类型"  width="15%"/]
+            [@b.col property="experiment.creditHours" title="学时"  width="8%"]
+              [#if exp.experiment.creditHours>0]${exp.experiment.creditHours}[#else]<span class="red-point" title="需要大于0">0</span>[/#if]
+            [/@]
+            [@b.col property="experiment.groupStdCount" title="每组人数"  width="8%"]
+               [#if exp.experiment.groupStdCount>0]${exp.experiment.groupStdCount}[#else]<span class="red-point" title="需要大于0">0</span>[/#if]
+            [/@]
+            [@b.col property="experiment.discipline.name" title="学科"  width="17%"]
+              [#if exp.experiment.discipline??]${exp.experiment.discipline.name}[#else]<span class="red-point" title="缺少数据">--</span>[/#if]
+            [/@]
+          [/@]
+        [/@]
+      [/#if]
+    </div>
   </div>
-
 </div>
 [@b.foot/]

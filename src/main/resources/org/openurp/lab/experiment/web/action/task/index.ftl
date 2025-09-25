@@ -1,6 +1,10 @@
 [#ftl]
 [@b.head/]
 [@b.toolbar title="实验填写要求"]
+  bar.addItem("填写统计","stat()");
+  function stat(){
+    bg.form.submit(document.taskSearchForm,"${b.url('!stat')}","_blank");
+  }
   bar.addBack();
 [/@]
 <div class="search-container">
@@ -17,6 +21,11 @@
         <option value="1">要求实验</option>
         <option value="0">不要求</option>
         <option value="null">未设置</option>
+      [/@]
+      [@b.select name="task.validated" label="是否完整" empty="..."]
+        <option value="">...</option>
+        <option value="1">不存在缺项</option>
+        <option value="0">存在缺项</option>
       [/@]
       <input type="hidden" name="orderBy" value="task.course.code"/>
     [/@]

@@ -51,7 +51,7 @@
         <td class="title">人数:</td>
         <td>${(task.clazzCount)!}班 ${(task.stdCount)!}人</td>
         <td class="title">实验室:</td>
-        <td colspan="3">[#list task.labs as lab]${lab.name}(${lab.room.name})[#sep],[/#list]</td>
+        <td colspan="3">[#list task.labs as lab]${lab.room.name}[#sep],[/#list]</td>
       </tr>
       [/#if]
     </table>

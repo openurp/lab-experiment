@@ -17,21 +17,24 @@
 
 package org.openurp.lab.experiment.web.action
 
+import org.beangle.commons.bean.orderings.PropertyOrdering
+import org.beangle.commons.collection.Collections
 import org.beangle.data.dao.OqlBuilder
-import org.beangle.webmvc.support.action.RestfulAction
+import org.beangle.webmvc.support.action.{ExportSupport, RestfulAction}
 import org.beangle.webmvc.view.View
-import org.openurp.base.edu.model.{Course, TeachingOffice}
-import org.openurp.base.model.{Department, Project, Semester}
+import org.openurp.base.edu.model.Course
+import org.openurp.base.model.{Project, Semester}
 import org.openurp.base.resource.model.Laboratory
-import org.openurp.code.edu.model.CourseRank
+import org.openurp.code.edu.model.{CourseRank, TeachingNature}
 import org.openurp.edu.clazz.model.{Clazz, ClazzActivity}
-import org.openurp.edu.course.model.{CourseTask, Syllabus}
+import org.openurp.edu.course.model.CourseTask
 import org.openurp.lab.experiment.model.{LabExperiment, LabTask}
+import org.openurp.lab.experiment.web.helper.SyllabusHelper
 import org.openurp.starter.web.support.ProjectSupport
 
 /** 课程任务
  */
-class TaskAction extends RestfulAction[LabTask], ProjectSupport {
+class TaskAction extends RestfulAction[LabTask], ProjectSupport, ExportSupport[LabTask] {
 
   override protected def indexSetting(): Unit = {
     super.indexSetting()
@@ -57,6 +60,8 @@ class TaskAction extends RestfulAction[LabTask], ProjectSupport {
     val roomToLabs = labs.map(x => (x.room.get, x)).toMap
     val rooms = labs.map(_.room.get).toSet
 
+    val theoryNature = new TeachingNature(TeachingNature.Theory)
+    val practiceNature = new TeachingNature(TeachingNature.Practice)
     if (rooms.nonEmpty) {
       val query = OqlBuilder.from[Course](classOf[ClazzActivity].getName, "activity")
       query.where("activity.clazz.project=:project", project)
@@ -79,27 +84,47 @@ class TaskAction extends RestfulAction[LabTask], ProjectSupport {
         val task = tasks.get(course) match {
           case None =>
             val t = new LabTask(course, semester, cTask.department)
-            t.required = Some(true)
+            t.required = true
             t
           case Some(t) => t.head
         }
         task.director = cTask.director
+        task.office = cTask.office
+        if (!cTask.syllabusRequired) {
+          task.required = false
+          if (task.remark.isEmpty) {
+            task.remark = Some("无大纲要求")
+          }
+        }
+
         task.stdCount = clazzes.map(_.enrollment.stdCount).sum
         task.rank = clazzes.head.courseType.rank.getOrElse(new CourseRank(CourseRank.Selective))
         task.clazzCount = clazzes.size
         task.labs.clear()
         task.labs.addAll(clazzLabs)
+        val syllabuses = new SyllabusHelper(entityDao).getSyllabus(course, semester)
         //FIXME 增补或者对比大纲中的实验
         if (task.experiments.isEmpty) {
-          val syllabuses = entityDao.findBy(classOf[Syllabus], "course", course).filter(_.within(semester.beginOn))
-          val exps = syllabuses.flatMap(_.experiments.sortBy(_.idx).map(_.experiment))
-          exps foreach { exp =>
-            val labExp = new LabExperiment(task.experiments.size + 1, task, exp)
-            task.experiments.addOne(labExp)
+          syllabuses foreach { syllabus =>
+            val exps = syllabus.experiments.sortBy(_.idx).map(_.experiment)
+            exps foreach { exp =>
+              val labExp = new LabExperiment(task.experiments.size + 1, task, exp)
+              task.experiments.addOne(labExp)
+            }
           }
         }
-        if (task.required.isEmpty) task.required = Some(true)
+        syllabuses foreach { syllabus =>
+          task.nature = syllabus.nature
+          task.theoryHours = syllabus.getCreditHours(theoryNature).intValue
+          task.practiceHours = syllabus.getCreditHours(practiceNature).intValue
+        }
+        if (null == task.nature) {
+          task.nature = course.nature
+          task.theoryHours = course.getJournal(task.semester).getHour(theoryNature).getOrElse(0)
+          task.practiceHours = course.getJournal(task.semester).getHour(practiceNature).getOrElse(0)
+        }
         task.expCount = task.experiments.size
+        task.checkValidated()
         entityDao.saveOrUpdate(task)
       }
     }
@@ -109,10 +134,34 @@ class TaskAction extends RestfulAction[LabTask], ProjectSupport {
   override protected def simpleEntityName: String = "task"
 
   override protected def getQueryBuilder: OqlBuilder[LabTask] = {
+    given project: Project = getProject
+
     val query = super.getQueryBuilder
-    query.where("task.course.project=:project", getProject)
+    query.where("task.course.project=:project", project)
+    getBoolean("hasEmpty") foreach { hasEmpty =>
+      if (hasEmpty) {
+        query.where("task.required=true")
+        query.where("not exists(from task.experiments) or " +
+          "exists(from task.experiments as te where te.experiment.discipline is null)")
+      } else {
+        query.where("task.required = false or exists(from task.experiments) and not exists(from task.experiments as te where te.experiment.discipline is null)")
+      }
+    }
     queryByDepart(query, "task.department")
     query
+  }
+
+  override def search(): View = {
+    given project: Project = getProject
+
+    put("teachingNatures", getCodes(classOf[TeachingNature]))
+
+    val departs = getDeparts
+    put("departs", departs)
+
+    val tasks = entityDao.search(getQueryBuilder)
+    put("tasks", tasks)
+    forward()
   }
 
   override protected def editSetting(task: LabTask): Unit = {
@@ -122,12 +171,76 @@ class TaskAction extends RestfulAction[LabTask], ProjectSupport {
     super.editSetting(task)
   }
 
-  private def getOffices(project: Project, departs: Seq[Department]): Seq[TeachingOffice] = {
-    val query = OqlBuilder.from(classOf[TeachingOffice], "o")
-    query.where("o.project=:project", project)
-    query.where("o.department in(:departs)", departs)
-    query.orderBy("o.name")
-    entityDao.search(query)
+  override protected def saveAndRedirect(task: LabTask): View = {
+    task.checkValidated()
+    task.expCount = task.experiments.size
+    super.saveAndRedirect(task)
+  }
+
+  def stat(): View = {
+    val project = getProject
+    val semester = entityDao.get(classOf[Semester], getIntId("task.semester"))
+    //需要修订的总数
+    val q = OqlBuilder.from[Array[Any]](classOf[LabTask].getName, "t")
+    q.where("t.course.project=:project and t.semester=:semester", project, semester)
+    q.groupBy("t.department.id,t.department.code,t.department.name,t.department.shortName")
+    q.select("t.department.id,t.department.code,t.department.name,t.department.shortName,count(*),sum(case when t.validated then 1 else 0 end) vcount")
+    val taskStats = entityDao.search(q)
+
+    val items = Collections.newBuffer[StatItem]
+    taskStats foreach { stat =>
+      val entry = Collections.newMap[String, Any]
+      val enName = if null == stat(3) then stat(2) else stat(3)
+      entry.addAll(Map("id" -> stat(0).toString, "code" -> stat(1).toString, "name" -> stat(2).toString, "shortName" -> enName))
+      val item = new StatItem
+      item.entry = entry
+      item.counters = Seq(stat(4).asInstanceOf[Number], stat(5).asInstanceOf[Number])
+      items.addOne(item)
+    }
+
+    put("project", project)
+    put("semester", semester)
+    put("items", items.sorted(PropertyOrdering.by("entry(code)")))
+    forward()
+  }
+
+  def report(): View = {
+    given project: Project = getProject
+
+    val semester = entityDao.get(classOf[Semester], getIntId("task.semester"))
+    val departs = getDeparts
+    val q = OqlBuilder.from(classOf[LabTask], "task")
+    q.where("task.course.project=:project", project)
+    q.where("task.semester=:semester", semester)
+    queryByDepart(q, "task.department")
+
+    val tasks = entityDao.search(q)
+    val departTasks = tasks.groupBy(_.department).map { x => (x._1, x._2.sorted(PropertyOrdering.by("required,course.code"))) }
+
+    val hasEmpties = departTasks.map { case (depart, ts) =>
+      val hasEmpty = ts.exists { t =>
+        val required = t.required
+        if (required) {
+          t.experiments.isEmpty || t.experiments.exists(_.experiment.category.isEmpty)
+        } else {
+          false
+        }
+      }
+      (depart, hasEmpty)
+    }
+    put("teachingNatures", getCodes(classOf[TeachingNature]))
+
+    put("departTasks", departTasks)
+    put("hasEmpties", hasEmpties)
+    put("semester", semester)
+    forward()
   }
 
 }
+class StatItem {
+
+  var entry: Any = _
+
+  var counters: Seq[Any] = Seq.empty
+}
+
