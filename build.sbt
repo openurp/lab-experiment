@@ -24,7 +24,7 @@ ThisBuild / homepage := Some(url("http://openurp.github.io/lab-experiment/index.
 
 val apiVer = "0.47.0"
 val starterVer = "0.4.1"
-val baseVer = "0.4.56"
+val baseVer = "0.4.57"
 val eduCoreVer = "0.3.18"
 val openurp_edu_api = "org.openurp.edu" % "openurp-edu-api" % apiVer
 val openurp_lab_api = "org.openurp.lab" % "openurp-lab-api" % apiVer
@@ -33,7 +33,7 @@ val openurp_stater_web = "org.openurp.starter" % "openurp-starter-web" % starter
 val openurp_base_tag = "org.openurp.base" % "openurp-base-tag" % baseVer
 
 lazy val webapp = (project in file("."))
-  .enablePlugins(WarPlugin, TomcatPlugin, UndertowPlugin)
+  .enablePlugins(WarPlugin, TomcatPlugin)
   .settings(
     name := "openurp-lab-experiment-webapp",
     common,

@@ -33,16 +33,17 @@
       [@b.col width="5%" title="实践学时" property="practiceHours"/]
       [@b.col width="7%" property="nature.name" title="课程性质"/]
       [@b.col width="8%" property="director.name" title="负责人"/]
-      [@b.col title="实验室"]
+      [@b.col title="实验室" width="13%"]
         <div class="text-ellipsis" title="[#list task.labs as lab]${lab.room.name}[#sep],[/#list]">
           [#list task.labs as lab]${lab.room.name}[#sep],[/#list]
         </div>
       [/@]
-      [@b.col width="6%" property="rank.name" title="必选修"/]
-      [@b.col width="6%" property="stdCount" title="学生数"/]
-      [@b.col width="6%" property="clazzCount" title="班级数"/]
-      [@b.col width="6%" property="expCount" title="实验数"/]
-      [@b.col width="6%" property="remark" title="备注"/]
+      [@b.col width="7%" property="rank.name" title="必选修"/]
+      [@b.col width="5%" property="stdCount" title="学生数"/]
+      [@b.col width="5%" property="expCount" title="实验数"/]
+      [@b.col width="11%" property="remark" title="备注"]
+        <span style="font-size:0.8em;">${task.remark!}</span>
+      [/@]
     [/@]
   [/@]
   [#if depart_has_next]

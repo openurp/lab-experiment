@@ -2,8 +2,12 @@
 [@b.head/]
 [@b.toolbar title="实验填写要求"]
   bar.addItem("填写统计","stat()");
+  bar.addItem("年度报表","yearReport()");
   function stat(){
     bg.form.submit(document.taskSearchForm,"${b.url('!stat')}","_blank");
+  }
+  function yearReport(){
+    bg.form.submit(document.taskSearchForm,"${b.url('!yearReport')}","_blank");
   }
   bar.addBack();
 [/@]

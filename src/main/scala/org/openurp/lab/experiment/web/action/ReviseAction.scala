@@ -79,6 +79,10 @@ class ReviseAction extends TeacherSupport, EntitySupport[Experiment] {
     task foreach { t =>
       val taskExperiments = t.experiments.map(_.experiment).toSet
       experiments = experiments.toBuffer.subtractAll(taskExperiments)
+      //检查是否有缺项
+      t.expCount = t.experiments.size
+      t.checkValidated()
+      entityDao.saveOrUpdate(t)
     }
     put("experiments", experiments)
     if (experiments.nonEmpty) {
@@ -94,6 +98,7 @@ class ReviseAction extends TeacherSupport, EntitySupport[Experiment] {
     put("syllabus", syllabuses.headOption)
     put("semester", semester)
     put("task", task)
+
     task foreach { t =>
       val hasErrorData = t.experiments.exists { le =>
         val e = le.experiment
