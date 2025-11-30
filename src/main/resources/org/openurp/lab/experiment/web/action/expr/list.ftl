@@ -4,6 +4,7 @@
   [@b.gridbar]
     bar.addItem("删除",action.remove());
     bar.addItem("修改",action.edit());
+    bar.addItem("批量修改",action.multi('batchEdit'));
     bar.addItem("${b.text("action.export")}",
                 action.exportData("course.project.school.code:学校代码,course.code:课程代码,course.name:课程名称,code:实验编号,"+
                 "name:实验名称,category.name:实验类别,experimentType.name:实验类型,discipline.name:实验所属学科,"+

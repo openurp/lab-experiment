@@ -1,7 +1,0 @@
-<?xml version="1.0"?>
-<cdi>
-  <container>
-    <module class="org.openurp.lab.experiment.web.action.DefaultModule"/>
-    <module class="org.openurp.starter.web.ProjectModule"/>
-  </container>
-</cdi>

@@ -133,7 +133,7 @@ class ReviseAction extends TeacherSupport, EntitySupport[Experiment] {
 
     var maxHours = course.creditHours.toFloat
     val syllabuses = new SyllabusHelper(entityDao).getSyllabus(course, task.semester)
-    syllabuses.headOption foreach { s =>
+    syllabuses foreach { s =>
       val syllabusHours = s.hours.filter(_.nature.category != TeachingNatureCategory.Theory).map(_.creditHours).sum
       val taskHours = task.experiments.map(_.experiment.creditHours).sum
       maxHours = syllabusHours - taskHours

@@ -2,14 +2,8 @@
 [@b.head/]
 <div class="container">
   [#list departTasks?keys as depart]
-  <table style="text-align:center;width:100%">
-    [#if hasEmpties.get(depart)]
-    <tr>
-      <td><h5>教学实验项目汇总表 [${semester.year.name}学年${semester.name}学期]</h5></td>
-    <tr>
-      <td><div class="alert alert-warning">(尚有数据存在缺项，请修正）</div></td>
-    </tr>
-    [#else]
+  [#assign tasks = departTasks.get(depart)/]
+  <table style="text-align:center;width:100%;line-height: 2.5rem;">
     <tr>
       <td colspan="2"><h5>教学实验项目汇总表 [${semester.year.name}学年${semester.name}学期]</h5></td>
     </tr>
@@ -18,12 +12,10 @@
       <td style="padding-left:50px;">完成日期：${b.now?string("yyyy年MM月dd日")}</td>
     </tr>
     <tr style="text-align:left;">
-      <td style="padding-left:50px;">教学院长（签字）：<u>[#list 1..20 as i]&nbsp;[/#list]</td>
-      <td></td>
+      <td style="padding-left:50px;">教学院长（签字）：<u>[#list 1..40 as i]&nbsp;[/#list]</td>
+      <td style="padding-left:50px;">[#if hasEmpties.get(depart)>0]本学院有${hasEmpties.get(depart)}门课程实验项目数据存在缺项，详见备注信息。[/#if]</td>
     </tr>
-    [/#if]
   </table>
-  [#assign tasks = departTasks.get(depart)/]
   [@b.grid items=tasks?sort_by(['course',"code"]) var="task" theme="mini" class="table-sm table-mini table-bordered"]
     [@b.row]
       [@b.col width="10%" property="course.code" title="代码"/]
@@ -42,7 +34,11 @@
       [@b.col width="5%" property="stdCount" title="学生数"/]
       [@b.col width="5%" property="expCount" title="实验数"/]
       [@b.col width="11%" property="remark" title="备注"]
+        [#if task.validated]
         <span style="font-size:0.8em;">${task.remark!}</span>
+        [#else]
+        <span style="font-size:0.8em;padding: 4px 4px 4px 4px;" class="alert alert-warning">未完成填写</span>
+        [/#if]
       [/@]
     [/@]
   [/@]

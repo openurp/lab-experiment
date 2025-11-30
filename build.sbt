@@ -1,7 +1,7 @@
 import org.openurp.parent.Settings.*
 
 ThisBuild / organization := "org.openurp.lab.experiment"
-ThisBuild / version := "0.0.2-SNAPSHOT"
+ThisBuild / version := "0.0.2"
 
 ThisBuild / scmInfo := Some(
   ScmInfo(
@@ -19,13 +19,13 @@ ThisBuild / developers := List(
   )
 )
 
-ThisBuild / description := "OpenURP Edu Extern"
+ThisBuild / description := "OpenURP Lab Experiment"
 ThisBuild / homepage := Some(url("http://openurp.github.io/lab-experiment/index.html"))
 
-val apiVer = "0.47.0"
-val starterVer = "0.4.1"
-val baseVer = "0.4.57"
-val eduCoreVer = "0.3.18"
+val apiVer = "0.48.2"
+val starterVer = "0.4.8"
+val baseVer = "0.4.63"
+val eduCoreVer = "0.4.3"
 val openurp_edu_api = "org.openurp.edu" % "openurp-edu-api" % apiVer
 val openurp_lab_api = "org.openurp.lab" % "openurp-lab-api" % apiVer
 val openurp_edu_core = "org.openurp.edu" % "openurp-edu-core" % eduCoreVer

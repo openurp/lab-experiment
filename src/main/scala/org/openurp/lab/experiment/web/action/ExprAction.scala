@@ -32,6 +32,15 @@ import scala.collection.SortedMap
  */
 class ExprAction extends RestfulAction[Experiment], ProjectSupport {
 
+  override protected def indexSetting(): Unit = {
+    given project: Project = getProject
+
+    put("departs", getDeparts)
+    put("categories", getCodes(classOf[ExperimentCategory]))
+    put("experimentTypes", getCodes(classOf[ExperimentType]))
+    put("disciplines", getCodes(classOf[Level1Discipline]))
+  }
+
   override def editSetting(experiment: Experiment): Unit = {
     if (!experiment.persisted) {
       val course = entityDao.get(classOf[Course], getLongId("course"))
@@ -48,6 +57,39 @@ class ExprAction extends RestfulAction[Experiment], ProjectSupport {
     put("categories", getCodes(classOf[ExperimentCategory]))
     put("experimentTypes", getCodes(classOf[ExperimentType]))
     put("disciplines", getCodes(classOf[Level1Discipline]))
+  }
+
+
+  def batchEdit(): View = {
+    given project: Project = getProject
+    put("categories", getCodes(classOf[ExperimentCategory]))
+    put("experimentTypes", getCodes(classOf[ExperimentType]))
+    put("disciplines", getCodes(classOf[Level1Discipline]))
+    put("experiments", entityDao.find(classOf[Experiment], getLongIds("experiment")))
+    forward()
+  }
+
+  def batchUpdate(): View = {
+    val experiments = entityDao.find(classOf[Experiment], getLongIds("experiment"))
+    getInt("category.id") foreach { categoryId =>
+      val category = entityDao.get(classOf[ExperimentCategory], categoryId)
+      experiments foreach { e => e.category = Some(category) }
+    }
+    getInt("experimentType.id") foreach { id =>
+      val e = entityDao.get(classOf[ExperimentType], id)
+      experiments foreach (_.experimentType = e)
+    }
+    getInt("discipline.id") foreach { id =>
+      val e = entityDao.get(classOf[Level1Discipline], id)
+      experiments foreach (_.discipline = Some(e))
+    }
+    getInt("groupStdCount") foreach { groupStdCount =>
+      if (groupStdCount > 0) {
+        experiments foreach (_.groupStdCount = groupStdCount)
+      }
+    }
+    entityDao.saveOrUpdate(experiments)
+    redirect("search", "info.save.success")
   }
 
   /** 日期对应当月的第一天的日期

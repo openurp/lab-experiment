@@ -4,7 +4,7 @@
   [@b.gridbar]
     [#if departs?size>2]
     bar.addItem("${b.text("action.modify")}",action.edit());
-    bar.addItem("初始化",action.method("autoCreate"));
+    bar.addItem("初始化",action.method("autoCreate","确定更新所有数据？"));
     bar.addItem("删除",action.remove());
     [/#if]
     bar.addItem("打印汇总表",action.method('report',"确认所有课程没有缺项，打印汇总表?",null,"_blank"));

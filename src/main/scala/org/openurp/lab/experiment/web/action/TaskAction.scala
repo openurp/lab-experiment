@@ -116,6 +116,9 @@ class TaskAction extends RestfulAction[LabTask], ProjectSupport, ExportSupport[L
             }
           }
         }
+
+        task.theoryHours = 0
+        task.practiceHours = 0
         syllabuses foreach { syllabus =>
           task.nature = syllabus.nature
           task.theoryHours = syllabus.getCreditHours(theoryNature).intValue
@@ -123,8 +126,6 @@ class TaskAction extends RestfulAction[LabTask], ProjectSupport, ExportSupport[L
         }
         if (null == task.nature) {
           task.nature = course.nature
-          task.theoryHours = course.getJournal(task.semester).getHour(theoryNature).getOrElse(0)
-          task.practiceHours = course.getJournal(task.semester).getHour(practiceNature).getOrElse(0)
         }
         task.expCount = task.experiments.size
         task.checkValidated()
@@ -221,8 +222,8 @@ class TaskAction extends RestfulAction[LabTask], ProjectSupport, ExportSupport[L
     val departTasks = tasks.groupBy(_.department).map { x => (x._1, x._2.sorted(PropertyOrdering.by("required,course.code"))) }
 
     val hasEmpties = departTasks.map { case (depart, ts) =>
-      val hasEmpty = ts.exists(!_.validated)
-      (depart, hasEmpty)
+      val emptyCnt = ts.count(!_.validated)
+      (depart, emptyCnt)
     }
     put("teachingNatures", getCodes(classOf[TeachingNature]))
 
