@@ -73,7 +73,7 @@ class ExprAction extends RestfulAction[Experiment], ProjectSupport {
     val experiments = entityDao.find(classOf[Experiment], getLongIds("experiment"))
     getInt("category.id") foreach { categoryId =>
       val category = entityDao.get(classOf[ExperimentCategory], categoryId)
-      experiments foreach { e => e.category = Some(category) }
+      experiments foreach { e => e.category = category }
     }
     getInt("experimentType.id") foreach { id =>
       val e = entityDao.get(classOf[ExperimentType], id)
@@ -81,7 +81,7 @@ class ExprAction extends RestfulAction[Experiment], ProjectSupport {
     }
     getInt("discipline.id") foreach { id =>
       val e = entityDao.get(classOf[Level1Discipline], id)
-      experiments foreach (_.discipline = Some(e))
+      experiments foreach (_.discipline = e)
     }
     getInt("groupStdCount") foreach { groupStdCount =>
       if (groupStdCount > 0) {

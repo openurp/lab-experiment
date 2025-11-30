@@ -30,7 +30,7 @@ import org.openurp.base.model.{Project, Semester}
 import org.openurp.code.edu.model.{ExperimentCategory, ExperimentType, Level1Discipline, TeachingNatureCategory}
 import org.openurp.edu.clazz.domain.ClazzProvider
 import org.openurp.edu.clazz.model.Clazz
-import org.openurp.edu.course.model.{Syllabus, SyllabusExperiment}
+import org.openurp.edu.course.model.SyllabusExperiment
 import org.openurp.edu.course.service.CourseTaskService
 import org.openurp.lab.experiment.model.{LabExperiment, LabTask}
 import org.openurp.lab.experiment.web.helper.SyllabusHelper
@@ -95,18 +95,22 @@ class ReviseAction extends TeacherSupport, EntitySupport[Experiment] {
     }
     put("course", course)
     val syllabuses = new SyllabusHelper(entityDao).getSyllabus(course, semester)
-    put("syllabus", syllabuses.headOption)
+    put("syllabus", syllabuses)
     put("semester", semester)
     put("task", task)
 
     task foreach { t =>
       val hasErrorData = t.experiments.exists { le =>
         val e = le.experiment
-        e.creditHours <= 0 || e.category.isEmpty || e.groupStdCount <= 0 || e.discipline.isEmpty
+        !isExpValidated(e)
       }
       put("hasErrorData", t.experiments.isEmpty || hasErrorData)
     }
     forward()
+  }
+
+  private def isExpValidated(exp: Experiment): Boolean = {
+    exp.discipline.name != "无" && exp.category.name != "无" && exp.groupStdCount > 0 && exp.creditHours > 0
   }
 
   def edit(): View = {
@@ -170,7 +174,7 @@ class ReviseAction extends TeacherSupport, EntitySupport[Experiment] {
     val task = entityDao.get(classOf[LabTask], getLongId("task"))
     getInt("category.id") foreach { categoryId =>
       val category = entityDao.get(classOf[ExperimentCategory], categoryId)
-      task.experiments foreach { e => e.experiment.category = Some(category) }
+      task.experiments foreach { e => e.experiment.category = category }
     }
     getInt("experimentType.id") foreach { id =>
       val e = entityDao.get(classOf[ExperimentType], id)
@@ -178,7 +182,7 @@ class ReviseAction extends TeacherSupport, EntitySupport[Experiment] {
     }
     getInt("discipline.id") foreach { id =>
       val e = entityDao.get(classOf[Level1Discipline], id)
-      task.experiments foreach (_.experiment.discipline = Some(e))
+      task.experiments foreach (_.experiment.discipline = e)
     }
     getInt("groupStdCount") foreach { groupStdCount =>
       if (groupStdCount > 0) {
